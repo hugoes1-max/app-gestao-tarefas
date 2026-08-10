@@ -1,0 +1,24 @@
+<!--
+Netlify Snippet Injection: "Fix Google Login - select_account"
+Local: before </body>
+Configurado em: Site settings > Build & deploy > Post processing > Snippet injection
+Arquivo apenas para referencia/documentacao - o snippet real e injetado pelo Netlify
+diretamente no HTML servido, e nao faz parte do index.html do repositorio.
+-->
+<script type="module">
+  import { GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  function applyGoogleLoginFix(){
+    if (!window.fb || !window.fb.auth) { setTimeout(applyGoogleLoginFix, 200); return; }
+    var provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    window.loginGoogle = async function(){
+      try{
+        await signInWithPopup(window.fb.auth, provider);
+      }catch(e){
+        var el = document.getElementById('login-error');
+        if (el){ el.textContent = 'Erro Google: '+e.code; el.style.display='block'; }
+      }
+    };
+  }
+  applyGoogleLoginFix();
+</script>
