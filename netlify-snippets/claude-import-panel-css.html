@@ -1,0 +1,29 @@
+<!--
+Netlify Snippet Injection: "Claude Import Panel - CSS"
+Local: before </head>
+Configurado em: Site settings > Build & deploy > Post processing > Snippet injection
+Este arquivo é apenas para referência/documentação — o snippet real é injetado pelo Netlify
+diretamente no HTML servido, e não faz parte do index.html do repositório.
+-->
+<style>
+/* Esconder botão FAB azul */
+#fab-plan { display: none !important; }
+
+/* === Painel Importar tarefas do Claude === */
+#claude-import-panel{margin:4px 0 0 0}
+#claude-import-header{display:flex;align-items:center;gap:8px;cursor:pointer;background:#f0f4ff;border:1px solid #c7d7f5;border-radius:10px;padding:10px 14px;user-select:none;transition:background 0.2s}
+#claude-import-header:hover{background:#e3ecff}
+#claude-import-body{display:none;background:#f8faff;border:1px solid #c7d7f5;border-top:none;border-radius:0 0 10px 10px;padding:12px}
+#claude-import-body p{margin:0 0 8px;font-size:13px;color:#444}
+#claude-import-text{width:100%;min-height:110px;border-radius:7px;border:1px solid #c7d7f5;padding:8px;font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit;outline:none}
+#claude-import-preview{display:none;margin:8px 0}
+.claude-import-actions{display:flex;gap:8px;margin-top:8px}
+.claude-import-actions button{flex:1;padding:8px;border:none;border-radius:7px;font-size:13px;cursor:pointer;font-weight:600}
+#claude-analyze-btn{background:#185fa5;color:white}
+#claude-import-btn{background:#28a745;color:white;display:none}
+.claude-preview-item{background:white;border:1px solid #dde;border-radius:6px;padding:6px 8px;margin-bottom:4px;font-size:12px}
+.claude-preview-scroll{max-height:160px;overflow-y:auto}
+.claude-preview-title{font-size:13px;font-weight:600;color:#185fa5;margin-bottom:6px}
+.claude-import-success{background:#d4edda;border:1px solid #c3e6cb;border-radius:6px;padding:8px;font-size:13px;color:#155724}
+.claude-import-error{color:#c00;font-size:13px}
+</style>
