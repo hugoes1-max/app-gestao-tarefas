@@ -1,0 +1,91 @@
+<!--
+Netlify Snippet Injection: "Filtros de tarefas (nome, data, responsavel, categoria, matriz)"
+Local: before </body>
+Configurado em: Site settings > Build & deploy > Post processing > Snippet injection
+Arquivo apenas para referencia/documentacao - o snippet real e injetado pelo Netlify
+diretamente no HTML servido, e nao faz parte do index.html do repositorio.
+-->
+<script>
+  (function(){
+    function init(){
+      if (!window.render || !document.getElementById('task-list') || !document.getElementById('app-main')) { setTimeout(init, 300); return; }
+      if (document.getElementById('cf-panel')) return;
+      var content = document.querySelector('.content');
+      var appMain = document.getElementById('app-main');
+      if (!content || !appMain) { setTimeout(init, 300); return; }
+
+      var toggleBtn = document.createElement('button');
+      toggleBtn.id = 'cf-toggle-btn';
+      toggleBtn.type = 'button';
+      toggleBtn.textContent = 'Filtrar';
+      toggleBtn.style.cssText = 'margin:10px 16px 0;padding:8px 14px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-weight:600;color:#333;align-self:flex-start;';
+
+      var panel = document.createElement('div');
+      panel.id = 'cf-panel';
+      panel.style.cssText = 'background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:10px 12px;margin:10px 16px;display:none;flex-wrap:wrap;gap:8px;align-items:center;';
+      panel.innerHTML =
+        '<input id="cf-name" type="text" placeholder="Buscar por nome..." style="flex:1;min-width:130px;padding:8px;border:1px solid #ddd;border-radius:8px;">' +
+        '<input id="cf-date" type="date" style="padding:8px;border:1px solid #ddd;border-radius:8px;">' +
+        '<input id="cf-resp" type="text" placeholder="Responsavel" style="padding:8px;border:1px solid #ddd;border-radius:8px;width:110px;">' +
+        '<input id="cf-cat" type="text" placeholder="Categoria" style="padding:8px;border:1px solid #ddd;border-radius:8px;width:110px;">' +
+        '<select id="cf-prio" style="padding:8px;border:1px solid #ddd;border-radius:8px;">' +
+        '<option value="">Matriz: Todos</option>' +
+        '<option value="urgente">Urgente</option>' +
+        '<option value="importante">Importante</option>' +
+        '<option value="circunstancial">Circunstancial</option>' +
+        '<option value="delegar">Delegar</option>' +
+        '</select>' +
+        '<button id="cf-clear" type="button" style="padding:8px 12px;border:none;border-radius:8px;background:#eee;cursor:pointer;">Limpar filtros</button>';
+
+      appMain.insertBefore(toggleBtn, content);
+      appMain.insertBefore(panel, content);
+
+      toggleBtn.addEventListener('click', function(){
+        var isHidden = panel.style.display === 'none';
+        panel.style.display = isHidden ? 'flex' : 'none';
+        toggleBtn.textContent = isHidden ? 'Fechar filtros' : 'Filtrar';
+      });
+
+      var originalRender = window.render;
+      window.render = function(){
+        var all = window.tasks || [];
+        var nameQ = (document.getElementById('cf-name').value || '').toLowerCase().trim();
+        var dateQ = document.getElementById('cf-date').value || '';
+        var respQ = (document.getElementById('cf-resp').value || '').toLowerCase().trim();
+        var catQ = (document.getElementById('cf-cat').value || '').toLowerCase().trim();
+        var prioQ = document.getElementById('cf-prio').value || '';
+        var hasFilter = nameQ || dateQ || respQ || catQ || prioQ;
+        if (!hasFilter) { originalRender(); return; }
+        var filtered = all.filter(function(t){
+          if (nameQ && (String(t.name||'').toLowerCase().indexOf(nameQ) === -1)) return false;
+          if (dateQ && t.date !== dateQ) return false;
+          if (respQ && (String(t.resp||'').toLowerCase().indexOf(respQ) === -1)) return false;
+          if (catQ && (String(t.cat||'').toLowerCase().indexOf(catQ) === -1)) return false;
+          if (prioQ && t.prio !== prioQ) return false;
+          return true;
+        });
+        var backup = window.tasks;
+        window.tasks = filtered;
+        try { originalRender(); } finally { window.tasks = backup; }
+      };
+
+      panel.addEventListener('input', function(e){
+        if (e.target && e.target.id && e.target.id.indexOf('cf-') === 0) { window.render(); }
+      });
+      panel.addEventListener('change', function(e){
+        if (e.target && e.target.id && e.target.id.indexOf('cf-') === 0) { window.render(); }
+      });
+      document.getElementById('cf-clear').addEventListener('click', function(){
+        document.getElementById('cf-name').value = '';
+        document.getElementById('cf-date').value = '';
+        document.getElementById('cf-resp').value = '';
+        document.getElementById('cf-cat').value = '';
+        document.getElementById('cf-prio').value = '';
+        window.render();
+      });
+    }
+    init();
+  })();
+</script>
+
+</script>
