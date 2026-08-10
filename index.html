@@ -917,8 +917,8 @@ function renderProd(){
             <!-- Grid lines -->
             ${[0,Math.round(maxVal/2),maxVal].map(v=>{
               const y=H-pad-(v/maxVal)*(H-pad*2);
-              return \`<line x1="\${pad}" y1="\${y}" x2="\${W-pad}" y2="\${y}" stroke="var(--border)" stroke-width="0.5"/>
-                      <text x="\${pad-2}" y="\${y+3}" font-size="7" fill="var(--text3)" text-anchor="end">\${v}</text>\`;
+              return `<line x1="${pad}" y1="${y}" x2="${W-pad}" y2="${y}" stroke="var(--border)" stroke-width="0.5"/>
+                      <text x="${pad-2}" y="${y+3}" font-size="7" fill="var(--text3)" text-anchor="end">${v}</text>`;
             }).join('')}
             <!-- Área preenchida -->
             <polygon points="${pad},${H-pad} ${points} ${W-pad},${H-pad}" fill="var(--blue-bg)" opacity="0.7"/>
@@ -928,8 +928,8 @@ function renderProd(){
             ${vals.map((v,i)=>{
               const x=pad+(i/(days.length-1))*(W-pad*2);
               const y=H-pad-(v/maxVal)*(H-pad*2);
-              return \`<circle cx="\${x}" cy="\${y}" r="3" fill="var(--blue)"/>
-                      <text x="\${x}" y="\${H+16}" font-size="7" fill="var(--text3)" text-anchor="middle">\${dayLabels[i]}</text>\`;
+              return `<circle cx="${x}" cy="${y}" r="3" fill="var(--blue)"/>
+                      <text x="${x}" y="${H+16}" font-size="7" fill="var(--text3)" text-anchor="middle">${dayLabels[i]}</text>`;
             }).join('')}
           </svg>
         </div>
@@ -938,25 +938,25 @@ function renderProd(){
       <!-- Por prioridade -->
       <div class="prod-card full">
         <div class="prod-title">Tarefas por prioridade</div>
-        ${['urgente','importante','circunstancial','delegar'].map(p=>\`
+        ${['urgente','importante','circunstancial','delegar'].map(p=>`
           <div class="bar-row">
-            <div class="bar-label">\${LABELS[p]}</div>
-            <div class="bar-track"><div class="bar-fill" style="width:\${total?Math.round(prioCounts[p]/total*100):0}%;background:\${COLORS[p]}"></div></div>
-            <div class="bar-val">\${prioCounts[p]}</div>
+            <div class="bar-label">${LABELS[p]}</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${total?Math.round(prioCounts[p]/total*100):0}%;background:${COLORS[p]}"></div></div>
+            <div class="bar-val">${prioCounts[p]}</div>
           </div>
-        \`).join('')}
+        `).join('')}
       </div>
 
       <!-- Tempo por categoria -->
       <div class="prod-card full">
         <div class="prod-title">Tempo investido por categoria</div>
-        ${catEntries.length?catEntries.map(([c,v])=>\`
+        ${catEntries.length?catEntries.map(([c,v])=>`
           <div class="bar-row">
-            <div class="bar-label">\${c}</div>
-            <div class="bar-track"><div class="bar-fill" style="width:\${Math.round(v/maxCatTime*100)}%;background:var(--blue)"></div></div>
-            <div class="bar-val" style="font-size:10px">\${fmtMin(v)||'—'}</div>
+            <div class="bar-label">${c}</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${Math.round(v/maxCatTime*100)}%;background:var(--blue)"></div></div>
+            <div class="bar-val" style="font-size:10px">${fmtMin(v)||'—'}</div>
           </div>
-        \`).join(''):'<p class="q-empty">Adicione categorias e durações às tarefas para ver aqui.</p>'}
+        `).join(''):'<p class="q-empty">Adicione categorias e durações às tarefas para ver aqui.</p>'}
       </div>
     </div>`;
 }
