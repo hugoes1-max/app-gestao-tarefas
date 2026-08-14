@@ -6,6 +6,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Minhas Tarefas">
 <title>Gestão de Tarefas</title>
+ <link rel="manifest" href="/manifest.json">
+ <meta name="theme-color" content="#185FA5">
+ <link rel="apple-touch-icon" href="/icon-192.png">
+ <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   :root{
@@ -1028,5 +1032,13 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(inp)inp.addEventListener('keydown',e=>{if(e.key==='Enter')addTask();});
 });
 </script>
+<script>
+ if('serviceWorker' in navigator){
+    window.addEventListener('load',()=>{
+         navigator.serviceWorker.register('/sw.js').catch(e=>console.warn('SW falhou:',e));
+    });
+ }
+  </script>
+ 
 </body>
 </html>
