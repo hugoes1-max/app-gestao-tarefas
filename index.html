@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Minhas Tarefas">
+<meta name="apple-mobile-web-app-title" content="Gestão de Tarefas">
 <title>Gestão de Tarefas</title>
  <link rel="manifest" href="/manifest.json">
  <meta name="theme-color" content="#185FA5">
@@ -205,7 +205,7 @@
 
 <!-- LOGIN -->
 <div id="login-screen" class="login-screen">
-  <h1>📋 Minhas Tarefas</h1>
+  <h1>📋 Gestão de Tarefas</h1>
   <p id="login-subtitle">Entre para acessar suas tarefas</p>
   <div class="login-form">
     <div id="login-error" class="login-error"></div>
@@ -225,7 +225,7 @@
 <div id="app-main" class="hidden">
 <div class="header">
   <div class="header-top">
-    <h1>📋 Minhas Tarefas</h1>
+    <h1>📋 Gestão de Tarefas</h1>
     <div class="user-chip" onclick="handleLogout()">
       <span class="avatar" id="user-avatar">?</span>
       <span id="user-email-short">Sair</span>
@@ -345,7 +345,7 @@
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast"></div><div id="app-legal-footer" style="text-align:center;font-size:12px;color:#999;padding:16px 8px 24px;"><a href="/privacidade" style="color:#185FA5;text-decoration:none;margin:0 8px;">Privacidade</a> · <a href="/termos" style="color:#185FA5;text-decoration:none;margin:0 8px;">Termos de Uso</a></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
