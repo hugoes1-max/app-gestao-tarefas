@@ -1170,10 +1170,21 @@ document.addEventListener('DOMContentLoaded',()=>{
 </script>
 <script>
  if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>{
-         navigator.serviceWorker.register('/sw.js').catch(e=>console.warn('SW falhou:',e));
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('/sw.js').then(function(reg){
+      document.addEventListener('visibilitychange', function(){
+        if(document.visibilityState==='visible') reg.update();
+      });
+      window.addEventListener('focus', function(){ reg.update(); });
+    }).catch(e=>console.warn('SW falhou:',e));
+    let __swReloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function(){
+      if(__swReloaded) return;
+      __swReloaded = true;
+      window.location.reload();
     });
- }
+  });
+}
   </script>
  
 </body>
