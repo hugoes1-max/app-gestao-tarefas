@@ -80,6 +80,8 @@
   .btn-add{flex:1;padding:10px;border:none;border-radius:var(--radius-sm);background:var(--blue);color:#fff;font-size:14px;font-weight:600;cursor:pointer}
   .share-row{display:flex;align-items:center;gap:8px;padding:2px}
   .share-row label{font-size:13px;color:var(--text2);display:flex;align-items:center;gap:6px;cursor:pointer}
+.recur-days{display:flex;flex-wrap:wrap;gap:6px;padding:4px 2px}
+.recur-days label{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:4px;cursor:pointer;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:4px 8px}
 
   /* Stats */
   .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
@@ -276,6 +278,24 @@
           <select id="dur-unit"><option value="min">min</option><option value="h">horas</option><option value="d">dias</option></select>
         </div>
         <button class="btn-add" onclick="addTask()">+ Adicionar</button>
+      </div>
+            <div class="field-row">
+        <select id="task-recur" onchange="onRecurChange('task-recur','task-recur-days')">
+          <option value="">Não repetir</option>
+          <option value="diaria">Repetir diariamente</option>
+          <option value="semanal">Repetir semanalmente</option>
+          <option value="mensal">Repetir mensalmente</option>
+          <option value="dias_semana">Dias específicos da semana</option>
+        </select>
+      </div>
+      <div class="recur-days" id="task-recur-days" style="display:none">
+        <label><input type="checkbox" value="0"> Dom</label>
+        <label><input type="checkbox" value="1"> Seg</label>
+        <label><input type="checkbox" value="2"> Ter</label>
+        <label><input type="checkbox" value="3"> Qua</label>
+        <label><input type="checkbox" value="4"> Qui</label>
+        <label><input type="checkbox" value="5"> Sex</label>
+        <label><input type="checkbox" value="6"> Sáb</label>
       </div>
       <div class="share-row">
         <label><input type="checkbox" id="task-shared" onchange="document.getElementById('task-share-emails').style.display=this.checked?'block':'none'"> 🔗 Compartilhar com outros usuários</label>
@@ -487,6 +507,90 @@ function fmtDur(v,u){if(!v)return '';return v+' '+({min:'min',h:'h',d:'dia(s)'}[
 function clean(s){return s&&s.trim()?s.trim():'';}
 function genId(){return 'task_'+Date.now()+'_'+Math.random().toString(36).substr(2,9);}
 
+function getRecurDays(containerId){
+  return [...document.querySelectorAll('#'+containerId+' input:checked')].map(x=>parseInt(x.value,10));
+}
+function readRecur(selectId,daysId){
+  const sel=document.getElementById(selectId);
+  const type=sel?sel.value:'';
+  if(!type)return null;
+  const rec={type};
+  if(type==='dias_semana')rec.days=getRecurDays(daysId);
+  return rec;
+}
+function onRecurChange(selectId,daysId){
+  const sel=document.getElementById(selectId);
+  const box=document.getElementById(daysId);
+  if(box)box.style.display=(sel&&sel.value==='dias_semana')?'flex':'none';
+}
+function setRecurUI(selectId,daysId,recurrence){
+  const sel=document.getElementById(selectId);
+  if(!sel)return;
+  sel.value=(recurrence&&recurrence.type)?recurrence.type:'';
+  onRecurChange(selectId,daysId);
+  if(recurrence&&recurrence.days){
+    const days=recurrence.days;
+    document.querySelectorAll('#'+daysId+' input').forEach(cb=>{cb.checked=days.includes(parseInt(cb.value,10));});
+  }
+}
+function pad2(n){return n<10?'0'+n:''+n;}
+function fmtISO(d){return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());}
+function daysInMonth(y,m){return new Date(y,m+1,0).getDate();}
+function computeOccurrenceDates(task){
+  if(!task.recurrence||!task.recurrence.type||!task.date)return [task.date];
+  const r=task.recurrence;
+  const start=new Date(task.date+'T00:00:00');
+  if(isNaN(start.getTime()))return [task.date];
+  const today=new Date();today.setHours(0,0,0,0);
+  const horizon=new Date(Math.max(today.getTime(),start.getTime())+60*24*60*60*1000);
+  const until=r.until?new Date(r.until+'T00:00:00'):null;
+  const limitDate=(until&&until<horizon)?until:horizon;
+  const MAX=60;
+  const dates=[];
+  if(r.type==='diaria'){
+    let d=new Date(start);
+    while(d<=limitDate&&dates.length<MAX){dates.push(fmtISO(d));d.setDate(d.getDate()+1);}
+  }else if(r.type==='semanal'){
+    let d=new Date(start);
+    while(d<=limitDate&&dates.length<MAX){dates.push(fmtISO(d));d.setDate(d.getDate()+7);}
+  }else if(r.type==='mensal'){
+    let count=0;const day=start.getDate();
+    let d=new Date(start);
+    while(d<=limitDate&&dates.length<MAX){
+      dates.push(fmtISO(d));
+      count++;
+      const nd=new Date(start.getFullYear(),start.getMonth()+count,1);
+      nd.setDate(Math.min(day,daysInMonth(nd.getFullYear(),nd.getMonth())));
+      d=nd;
+    }
+  }else if(r.type==='dias_semana'){
+    const wd=r.days||[];
+    let d=new Date(start);
+    while(d<=limitDate&&dates.length<MAX){
+      if(wd.indexOf(d.getDay())!==-1)dates.push(fmtISO(d));
+      d.setDate(d.getDate()+1);
+    }
+  }else{
+    return [task.date];
+  }
+  return dates;
+}
+function getExpandedTasks(){
+  const raw=window.tasks||[];
+  const out=[];
+  raw.forEach(t=>{
+    if(!t.recurrence||!t.recurrence.type){out.push(t);return;}
+    const dates=computeOccurrenceDates(t);
+    const completed=t.completedOccurrences||[];
+    dates.forEach(dateStr=>{
+      out.push(Object.assign({},t,{id:t.id+'__occ__'+dateStr,_baseId:t.id,_occDate:dateStr,date:dateStr,done:completed.indexOf(dateStr)!==-1,doneAt:null}));
+    });
+  });
+  return out;
+}
+window.getExpandedTasks=getExpandedTasks;
+
+
 async function addTask(){
   const inp=document.getElementById('task-input');
   const name=inp.value.trim();if(!name)return;
@@ -504,18 +608,34 @@ async function addTask(){
     done:false,doneAt:null,
     ownerId:user.uid,ownerEmail:user.email,
     shared,sharedWith,
+    recurrence:readRecur('task-recur','task-recur-days'),
+    completedOccurrences:[],
     createdAt:new Date().toISOString()
   };
   inp.value='';
-  ['task-resp','task-cat','task-date','task-time','dur-val','task-share-emails'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['task-resp','task-cat','task-date','task-time','dur-val','task-share-emails','task-recur'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('task-shared').checked=false;
   document.getElementById('task-share-emails').style.display='none';
   document.getElementById('dur-unit').value='min';
+  document.querySelectorAll('#task-recur-days input').forEach(cb=>{cb.checked=false;});
+  onRecurChange('task-recur','task-recur-days');
   editingId=null;
   try{await window.fbSaveTask(t);showToast('Salvo ✓');}catch(e){alert('Erro ao salvar: '+e.message);}
 }
 
 async function toggleDone(id){
+  if(id.indexOf('__occ__')!==-1){
+    const parts=id.split('__occ__');
+    const baseId=parts[0],dateStr=parts[1];
+    const t=window.tasks.find(x=>x.id===baseId);if(!t)return;
+    const list=t.completedOccurrences||[];
+    const i=list.indexOf(dateStr);
+    const willBeDone=i===-1;
+    if(willBeDone)list.push(dateStr);else list.splice(i,1);
+    t.completedOccurrences=list;
+    try{await window.fbSaveTask(t);showToast(willBeDone?'Concluída ✓':'Reaberta');}catch(e){alert('Erro: '+e.message);}
+    return;
+  }
   const t=window.tasks.find(x=>x.id===id);if(!t)return;
   t.done=!t.done;
   t.doneAt=t.done?new Date().toISOString():null;
@@ -523,38 +643,36 @@ async function toggleDone(id){
 }
 
 async function deleteTask(id){
+  const realId=id.split('__occ__')[0];
   if(!confirm('Remover esta tarefa?'))return;
-  try{await window.fbDeleteTask(id);if(editingId===id)editingId=null;showToast('Removida ✓');}catch(e){alert('Erro: '+e.message);}
+  try{await window.fbDeleteTask(realId);if(editingId===id||editingId===realId)editingId=null;showToast('Removida ✓');}catch(e){alert('Erro: '+e.message);}
 }
 
 async function duplicateTask(id){
-  const t=window.tasks.find(x=>x.id===id);if(!t)return;
+  const realId=id.split('__occ__')[0];
+  const t=window.tasks.find(x=>x.id===realId);if(!t)return;
   const user=window.getCurrentUser();if(!user)return;
-  const copy={...t,id:genId(),name:t.name+' (cópia)',done:false,doneAt:null,ownerId:user.uid,ownerEmail:user.email,createdAt:new Date().toISOString()};
+  const copy={...t,id:genId(),name:t.name+' (cópia)',done:false,doneAt:null,ownerId:user.uid,ownerEmail:user.email,completedOccurrences:[],createdAt:new Date().toISOString()};
   try{await window.fbSaveTask(copy);showToast('Duplicada ✓');}catch(e){alert('Erro: '+e.message);}
 }
 
 function startEdit(id){
-  // Se já está editando este, fecha
   if(editingId===id){
     editingId=null;
-    // Remove form sem re-renderizar tudo
     const form=document.getElementById('editform-'+id);
     if(form)form.remove();
     return;
   }
-  // Fecha edição anterior se houver
   if(editingId){
     const old=document.getElementById('editform-'+editingId);
     if(old)old.remove();
   }
   editingId=id;
-  const t=window.tasks.find(x=>x.id===id);
+  const realId=id.split('__occ__')[0];
+  const t=window.tasks.find(x=>x.id===realId);
   if(!t)return;
-  // Insere form diretamente no card sem re-renderizar
   const card=document.getElementById('card-'+id);
   if(!card)return;
-  // Remove form anterior se existir
   const existing=document.getElementById('editform-'+id);
   if(existing)existing.remove();
   const div=document.createElement('div');
@@ -565,32 +683,45 @@ function startEdit(id){
     <input type="text" id="eresp-${id}" placeholder="👤 Responsável">
     <input type="text" id="ecat-${id}" placeholder="🏷 Categoria">
     <select id="eprio-${id}">
-      <option value="urgente">🔴 Urgente</option>
-      <option value="importante">🔵 Importante</option>
-      <option value="circunstancial">🟡 Circunstancial</option>
-      <option value="delegar">⚪ Delegar</option>
+    <option value="urgente">🔴 Urgente</option>
+    <option value="importante">🔵 Importante</option>
+    <option value="circunstancial">🟡 Circunstancial</option>
+    <option value="delegar">⚪ Delegar</option>
     </select>
     <input type="date" id="edate-${id}">
     <input type="time" id="etime-${id}">
-    <div class="edit-dur-row">
-      <div class="edit-dur-inner">
-        <span>⏱</span>
-        <input type="number" id="edurval-${id}" min="1" max="999" placeholder="Duração">
-        <select id="edurunit-${id}">
-          <option value="min">min</option><option value="h">horas</option><option value="d">dias</option>
-        </select>
-      </div>
+    <div class="edit-dur-row"><div class="edit-dur-inner">
+    <span>⏱</span>
+    <input type="number" id="edurval-${id}" min="1" max="999" placeholder="Duração">
+    <select id="edurunit-${id}"><option value="min">min</option><option value="h">horas</option><option value="d">dias</option></select>
+    </div></div>
+    <div class="field-row">
+    <select id="erecur-${id}" onchange="onRecurChange('erecur-${id}','erecur-days-${id}')">
+    <option value="">Não repetir</option>
+    <option value="diaria">Repetir diariamente</option>
+    <option value="semanal">Repetir semanalmente</option>
+    <option value="mensal">Repetir mensalmente</option>
+    <option value="dias_semana">Dias específicos da semana</option>
+    </select>
+    </div>
+    <div class="recur-days" id="erecur-days-${id}" style="display:none">
+    <label><input type="checkbox" value="0"> Dom</label>
+    <label><input type="checkbox" value="1"> Seg</label>
+    <label><input type="checkbox" value="2"> Ter</label>
+    <label><input type="checkbox" value="3"> Qua</label>
+    <label><input type="checkbox" value="4"> Qui</label>
+    <label><input type="checkbox" value="5"> Sex</label>
+    <label><input type="checkbox" value="6"> Sáb</label>
     </div>
     <div class="share-row">
-      <label><input type="checkbox" id="eshared-${id}"> 🔗 Compartilhar com outros usuários</label>
+    <label><input type="checkbox" id="eshared-${id}" onchange="document.getElementById('esharedemails-${id}').style.display=this.checked?'block':'none'"> 🔗 Compartilhar com outros usuários</label>
     </div>
     <input type="text" id="esharedemails-${id}" placeholder="E-mails separados por vírgula" style="display:none">
     <div class="edit-btns">
-      <button class="btn-cancel" onclick="cancelEdit('${id}')">Cancelar</button>
-      <button class="btn-save" onclick="saveEdit('${id}')">💾 Salvar</button>
+    <button class="btn-cancel" onclick="cancelEdit('${id}')">Cancelar</button>
+    <button class="btn-save" onclick="saveEdit('${id}')">💾 Salvar</button>
     </div>`;
   card.appendChild(div);
-  // Popula os campos agora que o DOM existe
   document.getElementById('ename-'+id).value=t.name||'';
   document.getElementById('eresp-'+id).value=t.resp||'';
   document.getElementById('ecat-'+id).value=t.cat||'';
@@ -599,6 +730,7 @@ function startEdit(id){
   document.getElementById('etime-'+id).value=t.time||'';
   document.getElementById('edurval-'+id).value=t.durVal||'';
   document.getElementById('edurunit-'+id).value=t.durUnit||'min';
+  setRecurUI('erecur-'+id,'erecur-days-'+id,t.recurrence);
   const sc=document.getElementById('eshared-'+id);
   if(sc){
     sc.checked=!!t.shared;
@@ -611,7 +743,8 @@ function startEdit(id){
 async function saveEdit(id){
   const ne=document.getElementById('ename-'+id);if(!ne)return;
   const nm=ne.value.trim();if(!nm){alert('Nome não pode estar vazio.');return;}
-  const t=window.tasks.find(x=>x.id===id);if(!t)return;
+  const realId=id.split('__occ__')[0];
+  const t=window.tasks.find(x=>x.id===realId);if(!t)return;
   const gv=(i)=>{const e=document.getElementById(i);return e?e.value:'';};
   const shared=document.getElementById('eshared-'+id)?.checked||false;
   const sharedWith=shared?gv('esharedemails-'+id).split(',').map(x=>x.trim().toLowerCase()).filter(Boolean):[];
@@ -619,6 +752,8 @@ async function saveEdit(id){
   t.prio=gv('eprio-'+id);t.date=gv('edate-'+id);t.time=gv('etime-'+id);
   t.durVal=gv('edurval-'+id);t.durUnit=gv('edurunit-'+id);
   t.shared=shared;t.sharedWith=sharedWith;
+  t.recurrence=readRecur('erecur-'+id,'erecur-days-'+id);
+  if(!t.completedOccurrences)t.completedOccurrences=[];
   editingId=null;
   try{await window.fbSaveTask(t);showToast('Salvo ✓');render();}catch(e){alert('Erro: '+e.message);}
 }
@@ -667,37 +802,38 @@ function taskHtml(t){
   const user=window.getCurrentUser();
   const isOwner=user&&t.ownerId===user.uid;
   return `<div class="task-item${t.done?' done':''}" id="card-${t.id}">
-    <div class="task-main">
-      <div class="chk${t.done?' checked':''}" onclick="toggleDone('${t.id}')">
-        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="white" stroke-width="2.2"><polyline points="2,7 5,10 11,3"/></svg>
-      </div>
-      <div class="task-info">
-        <div class="task-name">${t.name}</div>
-        <div class="task-meta">
-          ${t.resp?'<span>👤 '+t.resp+'</span>':''}
-          ${t.cat?'<span>🏷 '+t.cat+'</span>':''}
-          ${meta?'<span>📅 '+meta+'</span>':''}
-          ${dur?'<span>⏱ '+dur+'</span>':''}
-          ${!isOwner?'<span>👥 '+((t.ownerEmail||'').split('@')[0])+'</span>':''}
-        </div>
-      </div>
-      <div class="task-right">
-        <span class="badge ${t.prio}">${LABELS[t.prio]}</span>
-        ${t.shared?'<span class="share-badge">🔗</span>':''}
-        <div class="btn-row">
-          <button class="btn-ic" onclick="startEdit('${t.id}')">✏️</button>
-          <button class="btn-ic" onclick="duplicateTask('${t.id}')">🗐</button>
-          <button class="btn-ic" onclick="deleteTask('${t.id}')">🗑</button>
-        </div>
-      </div>
-    </div>
+  <div class="task-main">
+  <div class="chk${t.done?' checked':''}" onclick="toggleDone('${t.id}')">
+  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="white" stroke-width="2.2"><polyline points="2,7 5,10 11,3"/></svg>
+  </div>
+  <div class="task-info">
+  <div class="task-name">${t.name}</div>
+  <div class="task-meta">
+  ${t.resp?'<span>👤 '+t.resp+'</span>':''}
+  ${t.cat?'<span>🏷 '+t.cat+'</span>':''}
+  ${meta?'<span>📅 '+meta+'</span>':''}
+  ${t.recurrence&&t.recurrence.type?'<span>🔁</span>':''}
+  ${dur?'<span>⏱ '+dur+'</span>':''}
+  ${!isOwner?'<span>👥 '+((t.ownerEmail||'').split('@')[0])+'</span>':''}
+  </div>
+  </div>
+  <div class="task-right">
+  <span class="badge ${t.prio}">${LABELS[t.prio]}</span>
+  ${t.shared?'<span class="share-badge">🔗</span>':''}
+  <div class="btn-row">
+  <button class="btn-ic" onclick="startEdit('${t.id}')">✏️</button>
+  <button class="btn-ic" onclick="duplicateTask('${t.id}')">🗐</button>
+  <button class="btn-ic" onclick="deleteTask('${t.id}')">🗑</button>
+  </div>
+  </div>
+  </div>
   </div>`;
 }
 
 function getVisibleTasks(){
   const chk=document.getElementById('chk-show-done');
   const showDone=chk?chk.checked:true;
-  const all=window.tasks||[];
+  const all=window.getExpandedTasks?window.getExpandedTasks():(window.tasks||[]);
   return showDone?all:all.filter(t=>!t.done);
 }
 
