@@ -201,6 +201,20 @@
   .plan-status.err{background:var(--red-bg);color:var(--red);display:block}
   .plan-status.loading{background:var(--blue-bg);color:var(--blue);display:block}
   .fab{position:fixed;bottom:24px;right:20px;background:var(--blue);color:#fff;border:none;border-radius:50%;width:52px;height:52px;font-size:22px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.2);z-index:50;display:flex;align-items:center;justify-content:center}
+
+  /* Sugestões de campo (responsável/categoria) */
+  .field-options-dropdown{position:fixed;z-index:200;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);box-shadow:0 6px 20px rgba(0,0,0,0.18);max-height:180px;overflow-y:auto}
+  .field-option{padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;border-bottom:1px solid var(--border)}
+  .field-option:last-child{border-bottom:none}
+  .field-option:active{background:var(--bg2)}
+  @media(hover:hover){.field-option:hover{background:var(--bg2)}}
+
+  /* Cadastro de responsável/categoria */
+  .register-row{display:flex;gap:6px}
+  .register-row input[type=text]{flex:1;min-width:0;padding:9px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;background:var(--bg);color:var(--text);outline:none}
+  .btn-register{flex:0 0 auto;padding:9px 14px;border:none;border-radius:var(--radius-sm);background:var(--blue);color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .option-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .option-chip{font-size:11px;color:var(--text2);background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:4px 10px}
 </style>
 </head>
 <body>
@@ -264,8 +278,8 @@
         </select>
       </div>
       <div class="field-row">
-        <input type="text" id="task-resp" placeholder="👤 Responsável">
-        <input type="text" id="task-cat" placeholder="🏷 Categoria">
+        <input type="text" id="task-resp" placeholder="👤 Responsável" data-field-type="resp" autocomplete="off">
+        <input type="text" id="task-cat" placeholder="🏷 Categoria" data-field-type="cat" autocomplete="off">
       </div>
       <div class="field-row">
         <input type="date" id="task-date">
@@ -311,10 +325,28 @@
   <div id="panel-pordata" class="panel"><div id="date-view"></div></div>
 
   <!-- POR RESPONSÁVEL -->
-  <div id="panel-resp" class="panel"><div id="resp-view"></div></div>
+  <div id="panel-resp" class="panel">
+    <div class="input-block">
+      <div class="register-row">
+        <input type="text" id="new-resp-input" placeholder="+ Cadastrar novo responsável">
+        <button class="btn-register" onclick="registerListItem('resp','new-resp-input')">Cadastrar</button>
+      </div>
+      <div class="option-chips" id="resp-options-chips"></div>
+    </div>
+    <div id="resp-view"></div>
+  </div>
 
   <!-- POR CATEGORIA -->
-  <div id="panel-categoria" class="panel"><div id="cat-view"></div></div>
+  <div id="panel-categoria" class="panel">
+    <div class="input-block">
+      <div class="register-row">
+        <input type="text" id="new-cat-input" placeholder="+ Cadastrar nova categoria">
+        <button class="btn-register" onclick="registerListItem('cat','new-cat-input')">Cadastrar</button>
+      </div>
+      <div class="option-chips" id="cat-options-chips"></div>
+    </div>
+    <div id="cat-view"></div>
+  </div>
 
   <!-- MATRIZ -->
   <div id="panel-matriz" class="panel">
@@ -440,6 +472,7 @@ onAuthStateChanged(auth,(user)=>{
     document.getElementById('fab-plan').style.display='none';
     if(unsubscribeTasks){unsubscribeTasks();unsubscribeTasks=null;}
     window.tasks=[];
+    window.listSeeds={resp:[],cat:[]};
   }
 });
 
@@ -459,7 +492,15 @@ function startSync(user){
   function merge(){
     const all = new Map([...ownTasks]);
     sharedTasks.forEach((v,k)=>{if(!all.has(k))all.set(k,v);});
-    window.tasks = [...all.values()];
+    const merged = [...all.values()];
+    // Itens "seed" guardam responsáveis/categorias cadastrados manualmente
+    // (mesma coleção 'tasks', mesmas regras de segurança), mas não são tarefas reais.
+    window.tasks = merged.filter(t=>!t.isListSeed);
+    const seeds = merged.filter(t=>t.isListSeed);
+    window.listSeeds = {
+      resp: seeds.filter(s=>s.type==='resp').map(s=>s.value),
+      cat: seeds.filter(s=>s.type==='cat').map(s=>s.value)
+    };
     if(window.render)window.render();
   }
 
@@ -486,6 +527,16 @@ window.fbSaveTask = async function(t){
 window.fbDeleteTask = async function(id){
   await deleteDoc(doc(db,'tasks',id));
 };
+window.fbAddListSeed = async function(type,value){
+  const user = currentUser;
+  if(!user) throw new Error('Não autenticado');
+  const id = 'seed_'+type+'_'+Date.now()+'_'+Math.random().toString(36).substr(2,8);
+  await setDoc(doc(db,'tasks',id), {
+    id, isListSeed:true, type, value,
+    ownerId:user.uid, ownerEmail:user.email,
+    createdAt:new Date().toISOString()
+  });
+};
 </script>
 
 <script>
@@ -495,6 +546,7 @@ const COLORS={urgente:'#993C1D',importante:'#185FA5',circunstancial:'#854F0B',de
 const BGCOLORS={urgente:'#faece7',importante:'#e6f1fb',circunstancial:'#faeeda',delegar:'#f1efe8'};
 let editingId=null;
 window.tasks=window.tasks||[];
+window.listSeeds=window.listSeeds||{resp:[],cat:[]};
 
 let toastTimer=null;
 function showToast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),1800);}
@@ -680,8 +732,8 @@ function startEdit(id){
   div.className='edit-form';
   div.innerHTML=`
     <input type="text" id="ename-${id}" placeholder="Nome da tarefa">
-    <input type="text" id="eresp-${id}" placeholder="👤 Responsável">
-    <input type="text" id="ecat-${id}" placeholder="🏷 Categoria">
+    <input type="text" id="eresp-${id}" placeholder="👤 Responsável" data-field-type="resp" autocomplete="off">
+    <input type="text" id="ecat-${id}" placeholder="🏷 Categoria" data-field-type="cat" autocomplete="off">
     <select id="eprio-${id}">
     <option value="urgente">🔴 Urgente</option>
     <option value="importante">🔵 Importante</option>
@@ -768,8 +820,8 @@ function cancelEdit(id){
 function editFormHtml(t){
   return `<div class="edit-form">
     <input type="text" id="ename-${t.id}" placeholder="Nome da tarefa">
-    <input type="text" id="eresp-${t.id}" placeholder="👤 Responsável">
-    <input type="text" id="ecat-${t.id}" placeholder="🏷 Categoria">
+    <input type="text" id="eresp-${t.id}" placeholder="👤 Responsável" data-field-type="resp" autocomplete="off">
+    <input type="text" id="ecat-${t.id}" placeholder="🏷 Categoria" data-field-type="cat" autocomplete="off">
     <select id="eprio-${t.id}">
       <option value="urgente">🔴 Urgente</option>
       <option value="importante">🔵 Importante</option>
@@ -837,8 +889,92 @@ function getVisibleTasks(){
   return showDone?all:all.filter(t=>!t.done);
 }
 
-function render(){renderStats();renderList();renderDateView();renderRespView();renderCatView();renderMatrix();renderProd();}
+function render(){renderStats();renderList();renderDateView();renderRespView();renderCatView();renderMatrix();renderProd();renderOptionChips();}
 window.render=render;
+
+/* ===== Sugestões de Responsável/Categoria (cadastradas + já usadas) ===== */
+function getFieldOptions(type){
+  const map=new Map();
+  const seeds=(window.listSeeds&&window.listSeeds[type])||[];
+  seeds.forEach(v=>{const c=clean(v);if(!c)return;const k=c.toLowerCase();if(!map.has(k))map.set(k,c);});
+  (window.tasks||[]).forEach(t=>{
+    const c=clean(type==='resp'?t.resp:t.cat);if(!c)return;
+    const k=c.toLowerCase();if(!map.has(k))map.set(k,c);
+  });
+  return [...map.values()].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+}
+
+function renderOptionChips(){
+  const build=(elId,type,icon)=>{
+    const el=document.getElementById(elId);if(!el)return;
+    el.innerHTML='';
+    getFieldOptions(type).forEach(o=>{
+      const span=document.createElement('span');
+      span.className='option-chip';
+      span.textContent=icon+' '+o;
+      el.appendChild(span);
+    });
+  };
+  build('resp-options-chips','resp','👤');
+  build('cat-options-chips','cat','🏷');
+}
+
+let openDropdownEl=null;
+function closeFieldOptions(){
+  const dd=document.getElementById('field-options-dropdown');
+  if(dd)dd.remove();
+  openDropdownEl=null;
+}
+function openFieldOptions(inputEl){
+  const type=inputEl.getAttribute('data-field-type');
+  if(!type)return;
+  closeFieldOptions();
+  const q=(inputEl.value||'').trim().toLowerCase();
+  let options=getFieldOptions(type);
+  if(q)options=options.filter(o=>o.toLowerCase().includes(q));
+  if(!options.length)return;
+  const dd=document.createElement('div');
+  dd.className='field-options-dropdown';
+  dd.id='field-options-dropdown';
+  options.forEach(opt=>{
+    const item=document.createElement('div');
+    item.className='field-option';
+    item.textContent=(type==='resp'?'👤 ':'🏷 ')+opt;
+    item.addEventListener('click',function(){
+      inputEl.value=opt;
+      closeFieldOptions();
+      inputEl.focus();
+    });
+    dd.appendChild(item);
+  });
+  const r=inputEl.getBoundingClientRect();
+  dd.style.left=r.left+'px';
+  dd.style.top=(r.bottom+4)+'px';
+  dd.style.width=r.width+'px';
+  document.body.appendChild(dd);
+  openDropdownEl=inputEl;
+}
+document.addEventListener('click',function(e){
+  const fieldInput=e.target.closest('input[data-field-type]');
+  if(fieldInput){openFieldOptions(fieldInput);return;}
+  if(!e.target.closest('.field-options-dropdown'))closeFieldOptions();
+});
+document.addEventListener('input',function(e){
+  const fieldInput=e.target.closest('input[data-field-type]');
+  if(fieldInput&&openDropdownEl===fieldInput)openFieldOptions(fieldInput);
+});
+document.addEventListener('scroll',closeFieldOptions,true);
+window.addEventListener('resize',closeFieldOptions);
+
+async function registerListItem(type,inputId){
+  const el=document.getElementById(inputId);if(!el)return;
+  const val=clean(el.value);if(!val)return;
+  try{
+    await window.fbAddListSeed(type,val);
+    el.value='';
+    showToast((type==='resp'?'Responsável':'Categoria')+' cadastrado ✓');
+  }catch(e){alert('Erro ao cadastrar: '+e.message);}
+}
 
 function renderStats(){
   const tasks=window.tasks||[];
