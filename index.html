@@ -203,13 +203,14 @@
   .fab{position:fixed;bottom:24px;right:20px;background:var(--blue);color:#fff;border:none;border-radius:50%;width:52px;height:52px;font-size:22px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.2);z-index:50;display:flex;align-items:center;justify-content:center}
 
   /* Sugestões de campo (responsável/categoria) */
-  .field-options-dropdown{position:fixed;z-index:200;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);box-shadow:0 6px 20px rgba(0,0,0,0.18);max-height:180px;overflow-y:auto}
+  .field-options-dropdown{position:fixed;z-index:200;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);box-shadow:0 6px 20px rgba(0,0,0,0.18);max-height:220px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   .field-option{padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;border-bottom:1px solid var(--border)}
   .field-option:last-child{border-bottom:none}
   .field-option:active{background:var(--bg2)}
   @media(hover:hover){.field-option:hover{background:var(--bg2)}}
 
   /* Cadastro de responsável/categoria */
+  .cadastro-titulo{font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px}
   .register-row{display:flex;gap:6px}
   .register-row input[type=text]{flex:1;min-width:0;padding:9px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;background:var(--bg);color:var(--text);outline:none}
   .btn-register{flex:0 0 auto;padding:9px 14px;border:none;border-radius:var(--radius-sm);background:var(--blue);color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
@@ -253,6 +254,7 @@
     <button class="tab" onclick="showPanel('pordata',this)">Por data</button>
     <button class="tab" onclick="showPanel('resp',this)">Responsável</button>
     <button class="tab" onclick="showPanel('categoria',this)">Categoria</button>
+    <button class="tab" onclick="showPanel('cadastros',this)">Cadastros</button>
     <button class="tab" onclick="showPanel('matriz',this)">Matriz</button>
     <button class="tab" onclick="showPanel('prod',this)">Produtividade</button>
     <button class="tab" onclick="showPanel('dicas',this)">Dicas</button>
@@ -326,26 +328,32 @@
 
   <!-- POR RESPONSÁVEL -->
   <div id="panel-resp" class="panel">
+    <div id="resp-view"></div>
+  </div>
+
+  <!-- POR CATEGORIA -->
+  <div id="panel-categoria" class="panel">
+    <div id="cat-view"></div>
+  </div>
+
+  <!-- CADASTROS -->
+  <div id="panel-cadastros" class="panel">
     <div class="input-block">
+      <div class="cadastro-titulo">👤 Responsáveis</div>
       <div class="register-row">
         <input type="text" id="new-resp-input" placeholder="+ Cadastrar novo responsável">
         <button class="btn-register" onclick="registerListItem('resp','new-resp-input')">Cadastrar</button>
       </div>
       <div class="option-chips" id="resp-options-chips"></div>
     </div>
-    <div id="resp-view"></div>
-  </div>
-
-  <!-- POR CATEGORIA -->
-  <div id="panel-categoria" class="panel">
     <div class="input-block">
+      <div class="cadastro-titulo">🏷 Categorias</div>
       <div class="register-row">
         <input type="text" id="new-cat-input" placeholder="+ Cadastrar nova categoria">
         <button class="btn-register" onclick="registerListItem('cat','new-cat-input')">Cadastrar</button>
       </div>
       <div class="option-chips" id="cat-options-chips"></div>
     </div>
-    <div id="cat-view"></div>
   </div>
 
   <!-- MATRIZ -->
@@ -963,7 +971,11 @@ document.addEventListener('input',function(e){
   const fieldInput=e.target.closest('input[data-field-type]');
   if(fieldInput&&openDropdownEl===fieldInput)openFieldOptions(fieldInput);
 });
-document.addEventListener('scroll',closeFieldOptions,true);
+document.addEventListener('scroll',function(e){
+  // Não fechar quando o toque/scroll é dentro do próprio dropdown de opções
+  if(e.target&&e.target.closest&&e.target.closest('.field-options-dropdown'))return;
+  closeFieldOptions();
+},true);
 window.addEventListener('resize',closeFieldOptions);
 
 async function registerListItem(type,inputId){
