@@ -59,7 +59,7 @@
   .header p{font-size:13px;color:var(--text2);margin-top:2px;margin-bottom:12px}
   .user-chip{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:5px 10px 5px 6px;cursor:pointer}
   .user-chip .avatar{width:18px;height:18px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
-  .tabs{display:flex;gap:0;overflow-x:auto;border-bottom:1px solid var(--border);-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs{display:flex;gap:0;overflow-x:auto;border-bottom:1px solid var(--border);-webkit-overflow-scrolling:touch;scrollbar-width:none;-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent 100%);mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent 100%)}
   .tabs::-webkit-scrollbar{display:none}
   .tab{font-size:13px;font-weight:600;color:var(--text2);background:none;border:none;padding:10px 12px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;flex-shrink:0}
   .tab.active{color:var(--blue);border-bottom-color:var(--blue)}
@@ -251,10 +251,10 @@
   <p>Organize, priorize e acompanhe seu dia</p>
   <div class="tabs">
     <button class="tab active" onclick="showPanel('lista',this)">Lista</button>
+    <button class="tab" onclick="showPanel('cadastros',this)">Cadastros</button>
     <button class="tab" onclick="showPanel('pordata',this)">Por data</button>
     <button class="tab" onclick="showPanel('resp',this)">Responsável</button>
     <button class="tab" onclick="showPanel('categoria',this)">Categoria</button>
-    <button class="tab" onclick="showPanel('cadastros',this)">Cadastros</button>
     <button class="tab" onclick="showPanel('matriz',this)">Matriz</button>
     <button class="tab" onclick="showPanel('prod',this)">Produtividade</button>
     <button class="tab" onclick="showPanel('dicas',this)">Dicas</button>
