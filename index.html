@@ -1390,5 +1390,111 @@ document.addEventListener('DOMContentLoaded',()=>{
 }
   </script>
  
+<script>
+// Filtros de tarefas (nome, data, responsável, categoria, matriz).
+// Os filtros valem para cada OCORRÊNCIA (inclusive as repetições de tarefas recorrentes),
+// e não só para a data de início da tarefa.
+(function(){
+  function init(){
+    if (!window.render || !window.getExpandedTasks || !document.getElementById('task-list') || !document.getElementById('app-main')) { setTimeout(init, 300); return; }
+    if (document.getElementById('cf-panel')) return;
+    var content = document.querySelector('.content');
+    var appMain = document.getElementById('app-main');
+    if (!content || !appMain) { setTimeout(init, 300); return; }
+
+    var toggleBtn = document.createElement('button');
+    toggleBtn.id = 'cf-toggle-btn';
+    toggleBtn.type = 'button';
+    toggleBtn.textContent = 'Filtrar';
+    toggleBtn.style.cssText = 'margin:10px 16px 0;padding:8px 14px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-weight:600;color:#333;align-self:flex-start;';
+
+    var panel = document.createElement('div');
+    panel.id = 'cf-panel';
+    panel.style.cssText = 'background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:10px 12px;margin:10px 16px;display:none;flex-wrap:wrap;gap:8px;align-items:center;';
+    panel.innerHTML =
+      '<input id="cf-name" type="text" placeholder="Buscar por nome..." style="flex:1;min-width:130px;padding:8px;border:1px solid #ddd;border-radius:8px;">' +
+      '<input id="cf-date" type="date" style="padding:8px;border:1px solid #ddd;border-radius:8px;">' +
+      '<input id="cf-resp" type="text" placeholder="Responsavel" style="padding:8px;border:1px solid #ddd;border-radius:8px;width:110px;">' +
+      '<input id="cf-cat" type="text" placeholder="Categoria" style="padding:8px;border:1px solid #ddd;border-radius:8px;width:110px;">' +
+      '<select id="cf-prio" style="padding:8px;border:1px solid #ddd;border-radius:8px;">' +
+      '<option value="">Matriz: Todos</option>' +
+      '<option value="urgente">Urgente</option>' +
+      '<option value="importante">Importante</option>' +
+      '<option value="circunstancial">Circunstancial</option>' +
+      '<option value="delegar">Delegar</option>' +
+      '</select>' +
+      '<button id="cf-clear" type="button" style="padding:8px 12px;border:none;border-radius:8px;background:#eee;cursor:pointer;">Limpar filtros</button>';
+
+    appMain.insertBefore(toggleBtn, content);
+    appMain.insertBefore(panel, content);
+
+    toggleBtn.addEventListener('click', function(){
+      var isHidden = panel.style.display === 'none';
+      panel.style.display = isHidden ? 'flex' : 'none';
+      toggleBtn.textContent = isHidden ? 'Fechar filtros' : 'Filtrar';
+    });
+
+    function readFilters(){
+      return {
+        name: (document.getElementById('cf-name').value || '').toLowerCase().trim(),
+        date: document.getElementById('cf-date').value || '',
+        resp: (document.getElementById('cf-resp').value || '').toLowerCase().trim(),
+        cat: (document.getElementById('cf-cat').value || '').toLowerCase().trim(),
+        prio: document.getElementById('cf-prio').value || ''
+      };
+    }
+    function hasAny(f){ return !!(f.name || f.date || f.resp || f.cat || f.prio); }
+    // t pode ser uma tarefa comum ou uma ocorrência (repetição) já com a data do próprio dia
+    function matches(t, f){
+      if (f.name && String(t.name||'').toLowerCase().indexOf(f.name) === -1) return false;
+      if (f.date && t.date !== f.date) return false;
+      if (f.resp && String(t.resp||'').toLowerCase().indexOf(f.resp) === -1) return false;
+      if (f.cat && String(t.cat||'').toLowerCase().indexOf(f.cat) === -1) return false;
+      if (f.prio && t.prio !== f.prio) return false;
+      return true;
+    }
+
+    var originalExpand = window.getExpandedTasks;
+    var originalRender = window.render;
+    var activeFilters = null;
+
+    // Durante a renderização com filtro, só as ocorrências que batem com o filtro são listadas
+    window.getExpandedTasks = function(){
+      var list = originalExpand();
+      if (!activeFilters) return list;
+      return list.filter(function(t){ return matches(t, activeFilters); });
+    };
+
+    window.render = function(){
+      var f = readFilters();
+      if (!hasAny(f)) { originalRender(); return; }
+      var all = window.tasks || [];
+      // tarefas-base que têm ao menos uma ocorrência dentro do filtro (as contagens usam estas)
+      var ids = {};
+      originalExpand().forEach(function(o){ if (matches(o, f)) ids[o._baseId || o.id] = true; });
+      var backup = window.tasks;
+      window.tasks = all.filter(function(t){ return ids[t.id]; });
+      activeFilters = f;
+      try { originalRender(); } finally { window.tasks = backup; activeFilters = null; }
+    };
+
+    panel.addEventListener('input', function(e){
+      if (e.target && e.target.id && e.target.id.indexOf('cf-') === 0) { window.render(); }
+    });
+    panel.addEventListener('change', function(e){
+      if (e.target && e.target.id && e.target.id.indexOf('cf-') === 0) { window.render(); }
+    });
+    document.getElementById('cf-clear').addEventListener('click', function(){
+      document.getElementById('cf-name').value = '';
+      document.getElementById('cf-date').value = '';
+      document.getElementById('cf-resp').value = '';
+      document.getElementById('cf-cat').value = '';
+      document.getElementById('cf-prio').value = '';
+      window.render();
+    });
+  }
+  init();
+})();
+</script>
 </body>
 </html>
