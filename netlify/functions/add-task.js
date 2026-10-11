@@ -93,6 +93,7 @@ function buildTask(input, owner) {
     recurrence = { type: r.type };
     if (r.type === 'dias_semana') recurrence.days = Array.isArray(r.days) ? r.days.map(Number) : [];
     if (r.until) recurrence.until = str(r.until);
+    if (Number(r.count) > 0) recurrence.count = Math.min(Math.floor(Number(r.count)), 366);
   }
   if (recurrence && !date) throw new Error('Tarefa recorrente precisa de "date" de início.');
 
