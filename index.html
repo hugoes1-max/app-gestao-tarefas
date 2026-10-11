@@ -81,6 +81,8 @@
   .share-row{display:flex;align-items:center;gap:8px;padding:2px}
   .share-row label{font-size:13px;color:var(--text2);display:flex;align-items:center;gap:6px;cursor:pointer}
 .recur-days{display:flex;flex-wrap:wrap;gap:6px;padding:4px 2px}
+.recur-end{display:flex;flex-wrap:wrap;gap:6px}
+.recur-end select,.recur-end input{flex:1;min-width:0;padding:9px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;background:var(--bg);color:var(--text);outline:none}
 .recur-days label{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:4px;cursor:pointer;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:4px 8px}
 
   /* Stats */
@@ -312,6 +314,15 @@
         <label><input type="checkbox" value="4"> Qui</label>
         <label><input type="checkbox" value="5"> Sex</label>
         <label><input type="checkbox" value="6"> Sáb</label>
+      </div>
+      <div class="recur-end" id="task-recur-end" style="display:none">
+        <select id="task-recur-end-mode" onchange="onRecurEndChange('task-recur')">
+          <option value="">Sem data final</option>
+          <option value="until">Repetir até a data</option>
+          <option value="count">Repetir N vezes</option>
+        </select>
+        <input type="date" id="task-recur-end-date" style="display:none" title="Repetir até">
+        <input type="number" id="task-recur-end-count" min="1" max="366" placeholder="Nº de vezes" style="display:none">
       </div>
       <div class="share-row">
         <label><input type="checkbox" id="task-shared" onchange="document.getElementById('task-share-emails').style.display=this.checked?'block':'none'"> 🔗 Compartilhar com outros usuários</label>
@@ -576,12 +587,25 @@ function readRecur(selectId,daysId){
   if(!type)return null;
   const rec={type};
   if(type==='dias_semana')rec.days=getRecurDays(daysId);
+  const mode=gv_(selectId+'-end-mode');
+  if(mode==='until'){const u=gv_(selectId+'-end-date');if(u)rec.until=u;}
+  else if(mode==='count'){const n=parseInt(gv_(selectId+'-end-count'),10);if(n>0)rec.count=Math.min(n,MAX_OCC);}
   return rec;
 }
+function gv_(id){const e=document.getElementById(id);return e?e.value:'';}
 function onRecurChange(selectId,daysId){
   const sel=document.getElementById(selectId);
   const box=document.getElementById(daysId);
   if(box)box.style.display=(sel&&sel.value==='dias_semana')?'flex':'none';
+  const end=document.getElementById(selectId+'-end');
+  if(end)end.style.display=(sel&&sel.value)?'flex':'none';
+}
+function onRecurEndChange(selectId){
+  const mode=gv_(selectId+'-end-mode');
+  const d=document.getElementById(selectId+'-end-date');
+  const c=document.getElementById(selectId+'-end-count');
+  if(d)d.style.display=mode==='until'?'block':'none';
+  if(c)c.style.display=mode==='count'?'block':'none';
 }
 function setRecurUI(selectId,daysId,recurrence){
   const sel=document.getElementById(selectId);
@@ -592,10 +616,19 @@ function setRecurUI(selectId,daysId,recurrence){
     const days=recurrence.days;
     document.querySelectorAll('#'+daysId+' input').forEach(cb=>{cb.checked=days.includes(parseInt(cb.value,10));});
   }
+  const mode=document.getElementById(selectId+'-end-mode');
+  if(mode){
+    const r=recurrence||{};
+    mode.value=r.count?'count':(r.until?'until':'');
+    const d=document.getElementById(selectId+'-end-date');if(d)d.value=r.until||'';
+    const c=document.getElementById(selectId+'-end-count');if(c)c.value=r.count||'';
+    onRecurEndChange(selectId);
+  }
 }
 function pad2(n){return n<10?'0'+n:''+n;}
 function fmtISO(d){return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());}
 function daysInMonth(y,m){return new Date(y,m+1,0).getDate();}
+const MAX_OCC=366;
 function computeOccurrenceDates(task){
   if(!task.recurrence||!task.recurrence.type||!task.date)return [task.date];
   const r=task.recurrence;
@@ -604,8 +637,19 @@ function computeOccurrenceDates(task){
   const today=new Date();today.setHours(0,0,0,0);
   const horizon=new Date(Math.max(today.getTime(),start.getTime())+60*24*60*60*1000);
   const until=r.until?new Date(r.until+'T00:00:00'):null;
-  const limitDate=(until&&until<horizon)?until:horizon;
-  const MAX=60;
+  const count=parseInt(r.count,10)>0?Math.min(parseInt(r.count,10),MAX_OCC):0;
+  let limitDate,MAX;
+  if(count){
+    // N vezes: gera exatamente N ocorrências, sem o limite de 60 dias
+    limitDate=new Date(start);limitDate.setFullYear(limitDate.getFullYear()+40);
+    MAX=count;
+  }else if(until&&!isNaN(until.getTime())){
+    // até a data: gera todas até a data final (máx. MAX_OCC)
+    limitDate=until;MAX=MAX_OCC;
+  }else{
+    // sem fim: mostra só os próximos 60 dias
+    limitDate=horizon;MAX=60;
+  }
   const dates=[];
   if(r.type==='diaria'){
     let d=new Date(start);
@@ -643,7 +687,7 @@ function getExpandedTasks(){
     const dates=computeOccurrenceDates(t);
     const completed=t.completedOccurrences||[];
     dates.forEach(dateStr=>{
-      out.push(Object.assign({},t,{id:t.id+'__occ__'+dateStr,_baseId:t.id,_occDate:dateStr,date:dateStr,done:completed.indexOf(dateStr)!==-1,doneAt:null}));
+      out.push(Object.assign({},t,{id:t.id+'__occ__'+dateStr,_baseId:t.id,_occDate:dateStr,date:dateStr,createdAt:dateStr+'T00:00:00',done:completed.indexOf(dateStr)!==-1,doneAt:null}));
     });
   });
   return out;
@@ -678,7 +722,9 @@ async function addTask(){
   document.getElementById('task-share-emails').style.display='none';
   document.getElementById('dur-unit').value='min';
   document.querySelectorAll('#task-recur-days input').forEach(cb=>{cb.checked=false;});
+  ['task-recur-end-mode','task-recur-end-date','task-recur-end-count'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   onRecurChange('task-recur','task-recur-days');
+  onRecurEndChange('task-recur');
   editingId=null;
   try{await window.fbSaveTask(t);showToast('Salvo ✓');}catch(e){alert('Erro ao salvar: '+e.message);}
 }
@@ -772,6 +818,15 @@ function startEdit(id){
     <label><input type="checkbox" value="4"> Qui</label>
     <label><input type="checkbox" value="5"> Sex</label>
     <label><input type="checkbox" value="6"> Sáb</label>
+    </div>
+    <div class="recur-end" id="erecur-${id}-end" style="display:none">
+    <select id="erecur-${id}-end-mode" onchange="onRecurEndChange('erecur-${id}')">
+    <option value="">Sem data final</option>
+    <option value="until">Repetir até a data</option>
+    <option value="count">Repetir N vezes</option>
+    </select>
+    <input type="date" id="erecur-${id}-end-date" style="display:none" title="Repetir até">
+    <input type="number" id="erecur-${id}-end-count" min="1" max="366" placeholder="Nº de vezes" style="display:none">
     </div>
     <div class="share-row">
     <label><input type="checkbox" id="eshared-${id}" onchange="document.getElementById('esharedemails-${id}').style.display=this.checked?'block':'none'"> 🔗 Compartilhar com outros usuários</label>
