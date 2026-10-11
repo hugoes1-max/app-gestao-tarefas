@@ -1,0 +1,8 @@
+[functions]
+  directory = "netlify/functions"
+
+[[redirects]]
+  from = "/api/add-task"
+  to = "/.netlify/functions/add-task"
+  status = 200
+  force = true
