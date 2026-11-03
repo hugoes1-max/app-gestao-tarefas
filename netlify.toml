@@ -6,3 +6,9 @@
   to = "/.netlify/functions/add-task"
   status = 200
   force = true
+
+[[redirects]]
+  from = "/mcp"
+  to = "/.netlify/functions/mcp"
+  status = 200
+  force = true
