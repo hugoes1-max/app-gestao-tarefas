@@ -229,6 +229,37 @@
   .btn-register{flex:0 0 auto;padding:9px 14px;border:none;border-radius:var(--radius-sm);background:var(--blue);color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
   .option-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
   .option-chip{font-size:11px;color:var(--text2);background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:4px 10px}
+
+  /* Metas SMART */
+  .goal-form textarea,.goal-form input[type=date],.goal-form input[type=number],.goal-form input[type=text]{width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:14px;background:var(--bg);color:var(--text);outline:none;font-family:inherit;resize:vertical}
+  .goal-form .field-row input{flex:1;min-width:0;width:auto}
+  .goal-form textarea:focus,.goal-form input:focus{border-color:var(--blue)}
+  .smart-step{display:flex;gap:10px;align-items:flex-start}
+  .smart-letter{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;margin-top:2px}
+  .smart-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+  .smart-body label{font-size:12px;font-weight:600;color:var(--text2)}
+  .goal-card{border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);padding:12px;margin-bottom:10px}
+  .goal-card.done{border-color:var(--green)}
+  .goal-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+  .goal-title{font-size:15px;font-weight:700;line-height:1.35;word-break:break-word}
+  .goal-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0}
+  .goal-badge.ok{background:var(--green-bg);color:var(--green)}
+  .goal-badge.warn{background:var(--yellow-bg);color:var(--yellow)}
+  .goal-badge.late{background:var(--red-bg);color:var(--red)}
+  .goal-badge.info{background:var(--blue-bg);color:var(--blue)}
+  .goal-prog{margin:10px 0 4px;height:10px;background:var(--bg3);border-radius:5px;overflow:hidden;position:relative}
+  .goal-prog-fill{height:100%;background:var(--blue);border-radius:5px;transition:width .3s}
+  .goal-card.done .goal-prog-fill{background:var(--green)}
+  .goal-prog-mark{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--text2);opacity:.6}
+  .goal-nums{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);gap:8px;flex-wrap:wrap}
+  .goal-smart-txt{margin-top:8px;font-size:12px;color:var(--text2);line-height:1.45}
+  .goal-smart-txt b{color:var(--text)}
+  .goal-actions{display:flex;gap:6px;align-items:center;margin-top:10px;flex-wrap:wrap}
+  .goal-actions input[type=number]{width:90px;padding:7px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;background:var(--bg);color:var(--text);outline:none}
+  .goal-actions button{padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg2);color:var(--text);font-size:12px;font-weight:600;cursor:pointer}
+  .goal-actions button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+  .goal-actions .spacer{flex:1}
+  .goal-section{font-size:12px;font-weight:700;color:var(--text2);margin:14px 0 8px;text-transform:uppercase;letter-spacing:.4px}
 </style>
 </head>
 <body>
@@ -269,6 +300,7 @@
     <button class="tab" onclick="showPanel('resp',this)">Responsável</button>
     <button class="tab" onclick="showPanel('categoria',this)">Categoria</button>
     <button class="tab" onclick="showPanel('matriz',this)">Matriz</button>
+    <button class="tab" onclick="showPanel('metas',this)">Metas</button>
     <button class="tab" onclick="showPanel('prod',this)">Produtividade</button>
     <button class="tab" onclick="showPanel('dicas',this)">Dicas</button>
   </div>
@@ -391,6 +423,35 @@
     </div>
   </div>
 
+  <!-- METAS (SMART) -->
+  <div id="panel-metas" class="panel">
+    <div class="input-block goal-form" id="goal-form">
+      <div class="cadastro-titulo" id="goal-form-title">🎯 Nova meta SMART</div>
+      <div class="smart-step"><span class="smart-letter">S</span><div class="smart-body"><label>Específica — o que exatamente você quer alcançar?</label>
+        <input type="text" id="goal-title" placeholder="Ex.: Fazer 30 vendas na loja Mercado Tech Hoje" maxlength="120">
+        <textarea id="goal-specific" rows="2" placeholder="Detalhe: o quê, onde, com quem, como (opcional)"></textarea></div></div>
+      <div class="smart-step"><span class="smart-letter">M</span><div class="smart-body"><label>Mensurável — como saber que chegou lá?</label>
+        <div class="field-row">
+          <input type="number" id="goal-target" min="0" step="any" placeholder="Alvo">
+          <input type="text" id="goal-unit" placeholder="Unidade" maxlength="20">
+          <input type="number" id="goal-current" min="0" step="any" placeholder="Atual">
+        </div></div></div>
+      <div class="smart-step"><span class="smart-letter">A</span><div class="smart-body"><label>Atingível — é realista? Que recursos e passos você tem?</label>
+        <textarea id="goal-achievable" rows="2" placeholder="Ex.: Tenho estoque, anúncios ativos e 2h por dia"></textarea></div></div>
+      <div class="smart-step"><span class="smart-letter">R</span><div class="smart-body"><label>Relevante — por que isso importa agora?</label>
+        <textarea id="goal-relevant" rows="2" placeholder="Ex.: Gera caixa para repor estoque"></textarea>
+        <input type="text" id="goal-cat" placeholder="🏷 Categoria (opcional)" list="goal-cat-list" autocomplete="off">
+        <datalist id="goal-cat-list"></datalist></div></div>
+      <div class="smart-step"><span class="smart-letter">T</span><div class="smart-body"><label>Temporal — qual é o prazo?</label>
+        <input type="date" id="goal-deadline" class="goal-date"></div></div>
+      <div class="dur-row">
+        <button class="btn-add" id="goal-save-btn" onclick="saveGoal()">+ Criar meta</button>
+        <button class="btn-plan-cancel" id="goal-cancel-btn" style="display:none;margin:0;flex:0 0 auto;padding:10px 14px" onclick="resetGoalForm()">Cancelar</button>
+      </div>
+    </div>
+    <div id="goals-view"></div>
+  </div>
+
   <!-- PRODUTIVIDADE -->
   <div id="panel-prod" class="panel"><div id="prod-view"></div></div>
 
@@ -505,6 +566,7 @@ onAuthStateChanged(auth,(user)=>{
     document.getElementById('fab-plan').style.display='none';
     if(unsubscribeTasks){unsubscribeTasks();unsubscribeTasks=null;}
     window.tasks=[];
+    window.goals=[];
     window.listSeeds={resp:[],cat:[]};
   }
 });
@@ -528,7 +590,8 @@ function startSync(user){
     const merged = [...all.values()];
     // Itens "seed" guardam responsáveis/categorias cadastrados manualmente
     // (mesma coleção 'tasks', mesmas regras de segurança), mas não são tarefas reais.
-    window.tasks = merged.filter(t=>!t.isListSeed);
+    window.tasks = merged.filter(t=>!t.isListSeed && !t.isGoal);
+    window.goals = merged.filter(t=>t.isGoal);
     const seeds = merged.filter(t=>t.isListSeed);
     window.listSeeds = {
       resp: seeds.filter(s=>s.type==='resp').map(s=>s.value),
@@ -580,6 +643,7 @@ const BGCOLORS={urgente:'#faece7',importante:'#e6f1fb',circunstancial:'#faeeda',
 let editingId=null;
 window.tasks=window.tasks||[];
 window.listSeeds=window.listSeeds||{resp:[],cat:[]};
+window.goals=window.goals||[];
 
 let toastTimer=null;
 function showToast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),1800);}
@@ -1040,7 +1104,7 @@ function restoreEditState(st){
 }
 function render(){
   const st=captureEditState();
-  renderStats();renderList();renderDateView();renderRespView();renderCatView();renderMatrix();renderProd();renderOptionChips();
+  renderStats();renderList();renderDateView();renderRespView();renderCatView();renderMatrix();renderProd();renderGoals();renderOptionChips();
   restoreEditState(st);
 }
 window.render=render;
@@ -1406,6 +1470,146 @@ function renderProd(){
       </div>
     </div>`;
 }
+
+
+/* ===== Metas SMART ===== */
+let editingGoalId=null;
+const $g=id=>document.getElementById(id);
+function goalNum(v){const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?0:n;}
+function fmtNum(n){return (Math.round(n*100)/100).toLocaleString('pt-BR');}
+function daysBetween(a,b){return Math.round((b-a)/86400000);}
+function isoToDate(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);}
+function goalInfo(g){
+  const target=goalNum(g.target),cur=goalNum(g.current);
+  const pct=target>0?Math.min(100,Math.round(cur/target*100)):0;
+  const today=new Date();today.setHours(0,0,0,0);
+  const end=g.deadline?isoToDate(g.deadline):null;
+  const start=g.startDate?isoToDate(g.startDate):today;
+  const left=end?daysBetween(today,end):null;
+  let expected=null;
+  if(end&&end>start){expected=Math.max(0,Math.min(100,Math.round(daysBetween(start,today)/daysBetween(start,end)*100)));}
+  const done=target>0&&cur>=target;
+  let st='info',label='Em andamento';
+  if(done){st='ok';label='Concluída 🎉';}
+  else if(left!==null&&left<0){st='late';label='Prazo vencido';}
+  else if(expected!==null&&pct+10<expected){st='warn';label='Atrasada no ritmo';}
+  else if(expected!==null){st='ok';label='No ritmo';}
+  return {pct,expected,left,done,st,label,cur,target};
+}
+function fillGoalCats(){
+  const dl=$g('goal-cat-list');if(!dl)return;
+  dl.innerHTML=getFieldOptions('cat').map(c=>'<option value="'+esc(c)+'"></option>').join('');
+}
+function resetGoalForm(){
+  editingGoalId=null;
+  ['goal-title','goal-specific','goal-target','goal-unit','goal-current','goal-achievable','goal-relevant','goal-cat','goal-deadline'].forEach(id=>{$g(id).value='';});
+  $g('goal-form-title').textContent='🎯 Nova meta SMART';
+  $g('goal-save-btn').textContent='+ Criar meta';
+  $g('goal-cancel-btn').style.display='none';
+}
+async function saveGoal(){
+  const user=window.getCurrentUser&&window.getCurrentUser();
+  if(!user){showToast('Faça login primeiro');return;}
+  const title=clean($g('goal-title').value);
+  const target=goalNum($g('goal-target').value);
+  const deadline=$g('goal-deadline').value;
+  if(!title){showToast('S: informe a meta (específica)');$g('goal-title').focus();return;}
+  if(!(target>0)){showToast('M: defina um valor alvo maior que 0');$g('goal-target').focus();return;}
+  if(!deadline){showToast('T: defina o prazo');$g('goal-deadline').focus();return;}
+  const old=editingGoalId?(window.goals||[]).find(x=>x.id===editingGoalId):null;
+  const todayISO=fmtISO(new Date());
+  const g={
+    id:editingGoalId||('goal_'+Date.now()+'_'+Math.random().toString(36).substr(2,8)),
+    isGoal:true,
+    title,
+    specific:clean($g('goal-specific').value),
+    target,
+    unit:clean($g('goal-unit').value),
+    current:goalNum($g('goal-current').value),
+    achievable:clean($g('goal-achievable').value),
+    relevant:clean($g('goal-relevant').value),
+    cat:clean($g('goal-cat').value),
+    deadline,
+    startDate:old?(old.startDate||todayISO):todayISO,
+    ownerId:old?old.ownerId:user.uid,
+    ownerEmail:old?old.ownerEmail:user.email,
+    createdAt:old?old.createdAt:new Date().toISOString(),
+    updatedAt:new Date().toISOString()
+  };
+  try{
+    await window.fbSaveTask(g);
+    showToast(editingGoalId?'Meta atualizada':'Meta criada 🎯');
+    resetGoalForm();
+  }catch(e){console.error(e);showToast('Erro ao salvar a meta');}
+}
+function editGoal(id){
+  const g=(window.goals||[]).find(x=>x.id===id);if(!g)return;
+  editingGoalId=id;
+  $g('goal-title').value=g.title||'';$g('goal-specific').value=g.specific||'';
+  $g('goal-target').value=g.target||'';$g('goal-unit').value=g.unit||'';$g('goal-current').value=g.current||'';
+  $g('goal-achievable').value=g.achievable||'';$g('goal-relevant').value=g.relevant||'';
+  $g('goal-cat').value=g.cat||'';$g('goal-deadline').value=g.deadline||'';
+  $g('goal-form-title').textContent='✏️ Editar meta';
+  $g('goal-save-btn').textContent='Salvar alterações';
+  $g('goal-cancel-btn').style.display='block';
+  $g('goal-form').scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function deleteGoal(id){
+  if(!confirm('Excluir esta meta?'))return;
+  try{await window.fbDeleteTask(id);if(editingGoalId===id)resetGoalForm();showToast('Meta excluída');}
+  catch(e){console.error(e);showToast('Erro ao excluir');}
+}
+async function updateGoalProgress(id,mode){
+  const g=(window.goals||[]).find(x=>x.id===id);if(!g)return;
+  const inp=document.getElementById('gp-'+id);
+  const raw=inp?inp.value:'';
+  if(raw===''||isNaN(goalNum(raw))){showToast('Digite um valor');return;}
+  const v=goalNum(raw);
+  const next=mode==='add'?goalNum(g.current)+v:v;
+  try{await window.fbSaveTask({...g,current:Math.max(0,next),updatedAt:new Date().toISOString()});if(inp)inp.value='';}
+  catch(e){console.error(e);showToast('Erro ao atualizar');}
+}
+function goalCardHTML(g){
+  const i=goalInfo(g),u=g.unit?' '+esc(g.unit):'';
+  let prazo='';
+  if(g.deadline){
+    const d=fmtDate(g.deadline);
+    prazo=i.done?'📅 '+d:i.left<0?'📅 '+d+' · venceu há '+(-i.left)+' dia(s)':i.left===0?'📅 vence hoje':'📅 '+d+' · faltam '+i.left+' dia(s)';
+  }
+  const parts=[];
+  if(g.specific)parts.push('<b>S</b> '+esc(g.specific));
+  parts.push('<b>M</b> '+fmtNum(i.target)+u);
+  if(g.achievable)parts.push('<b>A</b> '+esc(g.achievable));
+  if(g.relevant)parts.push('<b>R</b> '+esc(g.relevant));
+  return `<div class="goal-card${i.done?' done':''}">
+    <div class="goal-head"><div class="goal-title">${esc(g.title)}</div><span class="goal-badge ${i.st}">${i.label}</span></div>
+    <div class="goal-prog"><div class="goal-prog-fill" style="width:${i.pct}%"></div>${i.expected!==null&&!i.done?`<div class="goal-prog-mark" style="left:${i.expected}%" title="Ritmo esperado"></div>`:''}</div>
+    <div class="goal-nums"><span><b>${fmtNum(i.cur)}</b> / ${fmtNum(i.target)}${u} · ${i.pct}%</span><span>${prazo}</span></div>
+    ${g.cat?`<div class="goal-nums" style="margin-top:4px"><span>🏷 ${esc(g.cat)}</span></div>`:''}
+    <div class="goal-smart-txt">${parts.join('<br>')}</div>
+    <div class="goal-actions">
+      <input type="number" id="gp-${g.id}" step="any" min="0" placeholder="Valor">
+      <button class="primary" onclick="updateGoalProgress('${g.id}','add')">+ Somar</button>
+      <button onclick="updateGoalProgress('${g.id}','set')">Definir</button>
+      <span class="spacer"></span>
+      <button onclick="editGoal('${g.id}')">✏️</button>
+      <button onclick="deleteGoal('${g.id}')">🗑</button>
+    </div>
+  </div>`;
+}
+function renderGoals(){
+  fillGoalCats();
+  const el=document.getElementById('goals-view');if(!el)return;
+  const goals=(window.goals||[]).slice();
+  if(!goals.length){el.innerHTML='<div class="empty">Nenhuma meta ainda.<br>Preencha o formulário acima seguindo o método SMART:<br>Específica · Mensurável · Atingível · Relevante · Temporal.</div>';return;}
+  const act=[],fin=[];
+  goals.forEach(g=>(goalInfo(g).done?fin:act).push(g));
+  act.sort((a,b)=>(a.deadline||'9999').localeCompare(b.deadline||'9999'));
+  fin.sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
+  el.innerHTML=(act.length?'<div class="goal-section">Em andamento ('+act.length+')</div>'+act.map(goalCardHTML).join(''):'')
+    +(fin.length?'<div class="goal-section">Concluídas ('+fin.length+')</div>'+fin.map(goalCardHTML).join(''):'');
+}
+window.saveGoal=saveGoal;window.editGoal=editGoal;window.deleteGoal=deleteGoal;window.updateGoalProgress=updateGoalProgress;window.resetGoalForm=resetGoalForm;
 
 function showPanel(id,btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
