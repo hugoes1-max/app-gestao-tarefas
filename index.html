@@ -114,9 +114,11 @@
   .chk.checked{background:var(--green);border-color:var(--green)}
   .chk svg{display:none}.chk.checked svg{display:block}
   .task-info{flex:1;min-width:0}
-  .task-name{font-size:15px;line-height:1.4;color:var(--text);word-break:break-word}
+  .task-name{font-size:15px;line-height:1.45;font-weight:500;color:var(--text);overflow-wrap:anywhere;word-break:normal;white-space:normal}
   .task-meta{font-size:11px;color:var(--text3);margin-top:4px;display:flex;flex-wrap:wrap;gap:6px}
-  .task-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+  .task-right{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)}
+  .task-right .btn-row{margin-left:auto;gap:6px}
+  .task-right .btn-ic{padding:7px 11px}
   .badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap}
   .badge.urgente{background:var(--red-bg);color:var(--red)}
   .badge.importante{background:var(--blue-bg);color:var(--blue)}
@@ -1071,7 +1073,6 @@ function taskHtml(t,ctx){
   ${dur?'<span>⏱ '+dur+'</span>':''}
   ${!isOwner?'<span>👥 '+esc((t.ownerEmail||'').split('@')[0])+'</span>':''}
   </div>
-  </div>
   <div class="task-right">
   <span class="badge ${t.prio}">${LABELS[t.prio]||esc(t.prio)}</span>
   ${t.shared?'<span class="share-badge">🔗</span>':''}
@@ -1079,6 +1080,7 @@ function taskHtml(t,ctx){
   <button class="btn-ic" onclick="startEdit('${t.id}',this)">✏️</button>
   <button class="btn-ic" onclick="duplicateTask('${t.id}')">🗐</button>
   <button class="btn-ic" onclick="deleteTask('${t.id}')">🗑</button>
+  </div>
   </div>
   </div>
   </div>

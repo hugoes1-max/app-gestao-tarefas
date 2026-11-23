@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gestao-tarefas-v2';
+const CACHE_NAME = 'gestao-tarefas-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
