@@ -107,6 +107,9 @@
 
   /* Limpar repetidas */
   .btn-dedupe{margin-left:auto;padding:6px 12px;border:1px solid var(--border2);border-radius:20px;background:var(--bg2);color:var(--text);font-size:12px;font-weight:600;cursor:pointer}
+  .dup-crit{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+  .dup-crit label{display:flex;align-items:center;gap:5px;font-size:13px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:6px 11px;cursor:pointer;user-select:none}
+  .dup-warn{font-size:12px;color:var(--yellow);background:var(--yellow-bg);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:10px}
   .dup-group{display:flex;gap:10px;align-items:flex-start;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px}
   .dup-group input{margin-top:3px;width:18px;height:18px;flex-shrink:0}
   .dup-name{font-size:14px;font-weight:600;line-height:1.4;overflow-wrap:anywhere}
@@ -492,6 +495,9 @@
   <div class="modal-box">
     <div class="modal-title">🧹 Tarefas repetidas</div>
     <div class="modal-sub" id="dup-sub"></div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:6px">Considerar repetidas quando forem iguais em:</div>
+    <div class="dup-crit" id="dup-crit"></div>
+    <div id="dup-warn"></div>
     <div id="dup-list"></div>
     <button class="btn-plan dup-danger" id="dup-apagar" onclick="apagarRepetidas()">Apagar repetidas selecionadas</button>
     <button class="btn-plan-cancel" id="dup-desfazer" style="display:none;margin-bottom:8px" onclick="desfazerRepetidas()">↩ Desfazer</button>
@@ -902,16 +908,36 @@ async function deleteTask(id){
 
 
 // ===== Limpar tarefas repetidas =====
-// Considera repetidas as tarefas SUAS com mesmo nome (ignorando maiúsculas, acentos e espaços),
-// mesma data, mesmo horário, mesma repetição e mesmo status (concluída ou não).
+// Repetidas = tarefas SUAS iguais nos critérios escolhidos no painel (nome, data, horário, assunto, etc.).
 let dupGroups=[],dupRemoved=[];
 function dupNorm(x){return String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim();}
-function dupKey(t){return [dupNorm(t.name),t.date||'',t.time||'',(t.recurrence&&t.recurrence.type)||'',t.done?'1':'0'].join('|');}
+const DUP_OPTS=[['nome','Nome'],['data','Data'],['hora','Horário'],['cat','Assunto (categoria)'],['resp','Responsável'],['rep','Repetição'],['status','Status (concluída)']];
+let dupCrit={nome:true,data:true,hora:true,cat:false,resp:false,rep:true,status:true};
+function dupKey(t){
+  const c=dupCrit,k=[];
+  if(c.nome)k.push(dupNorm(t.name));
+  if(c.data)k.push(t.date||'');
+  if(c.hora)k.push(t.time||'');
+  if(c.cat)k.push(dupNorm(t.cat));
+  if(c.resp)k.push(dupNorm(t.resp));
+  if(c.rep)k.push((t.recurrence&&t.recurrence.type)||'');
+  if(c.status)k.push(t.done?'1':'0');
+  return k.join('|');
+}
+function renderCritRepetidas(){
+  document.getElementById('dup-crit').innerHTML=DUP_OPTS.map(o=>`<label><input type="checkbox" ${dupCrit[o[0]]?'checked':''} onchange="mudarCritRepetidas('${o[0]}',this.checked)"> ${o[1]}</label>`).join('');
+  document.getElementById('dup-warn').innerHTML=!dupCrit.nome?'<div class="dup-warn">⚠️ Sem "Nome" marcado, tarefas diferentes podem ser tratadas como repetidas. Revise a lista com atenção.</div>':'';
+}
+function mudarCritRepetidas(k,v){
+  dupCrit[k]=v;
+  if(!Object.values(dupCrit).some(Boolean)){dupCrit[k]=true;showToast('Marque ao menos um critério');}
+  dupGroups=findDupGroups();renderCritRepetidas();renderRepetidas();
+}
 function dupScore(t){let n=0;['resp','cat','date','time','durVal','order','goalId','notes'].forEach(k=>{if(t[k]!==undefined&&t[k]!==null&&t[k]!=='')n++;});if(t.shared)n++;return n;}
 function findDupGroups(){
   const user=window.getCurrentUser();if(!user)return [];
   const map=new Map();
-  (window.tasks||[]).filter(t=>t.ownerId===user.uid&&dupNorm(t.name)).forEach(t=>{
+  (window.tasks||[]).filter(t=>t.ownerId===user.uid).forEach(t=>{
     const k=dupKey(t);if(!map.has(k))map.set(k,[]);map.get(k).push(t);
   });
   const out=[];
@@ -924,7 +950,7 @@ function findDupGroups(){
   return out.sort((a,b)=>dupNorm(a.keep.name).localeCompare(dupNorm(b.keep.name)));
 }
 function abrirRepetidas(){
-  dupGroups=findDupGroups();dupRemoved=[];
+  dupGroups=findDupGroups();dupRemoved=[];renderCritRepetidas();
   document.getElementById('dup-desfazer').style.display='none';
   renderRepetidas();
   document.getElementById('modal-dup').classList.remove('hidden');
@@ -937,7 +963,7 @@ function renderRepetidas(){
     list.innerHTML='';btn.style.display='none';return;
   }
   const total=dupGroups.reduce((n,g)=>n+g.extra.length,0);
-  sub.textContent='Encontrei '+dupGroups.length+' tarefa(s) com cópias ('+total+' a mais). Em cada grupo, uma é mantida e as outras são apagadas. Desmarque o que quiser deixar como está.';
+  sub.textContent='Encontrei '+dupGroups.length+' grupo(s) de tarefas repetidas ('+total+' a mais). Em cada grupo, uma é mantida e as outras são apagadas. Desmarque o que quiser deixar como está.';
   list.innerHTML=dupGroups.map((g,i)=>{
     const t=g.keep,meta=[fmtDate(t.date,t.time),t.cat,t.resp,t.done?'concluída':''].filter(Boolean).join(' · ');
     return `<label class="dup-group"><input type="checkbox" class="dup-chk" data-i="${i}" checked onchange="atualizarBtnRepetidas()">
@@ -973,7 +999,7 @@ async function desfazerRepetidas(){
   document.getElementById('dup-list').innerHTML='';
   showToast('Restauradas ✓');
 }
-window.abrirRepetidas=abrirRepetidas;window.fecharRepetidas=fecharRepetidas;window.apagarRepetidas=apagarRepetidas;window.desfazerRepetidas=desfazerRepetidas;window.atualizarBtnRepetidas=atualizarBtnRepetidas;
+window.abrirRepetidas=abrirRepetidas;window.fecharRepetidas=fecharRepetidas;window.apagarRepetidas=apagarRepetidas;window.desfazerRepetidas=desfazerRepetidas;window.atualizarBtnRepetidas=atualizarBtnRepetidas;window.mudarCritRepetidas=mudarCritRepetidas;
 
 async function duplicateTask(id){
   const realId=id.split('__occ__')[0];
