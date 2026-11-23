@@ -104,6 +104,14 @@
   .total-time{font-size:12px;color:var(--text2);background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:14px}
   .total-time strong{color:var(--text)}
 
+
+  /* Limpar repetidas */
+  .btn-dedupe{margin-left:auto;padding:6px 12px;border:1px solid var(--border2);border-radius:20px;background:var(--bg2);color:var(--text);font-size:12px;font-weight:600;cursor:pointer}
+  .dup-group{display:flex;gap:10px;align-items:flex-start;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px}
+  .dup-group input{margin-top:3px;width:18px;height:18px;flex-shrink:0}
+  .dup-name{font-size:14px;font-weight:600;line-height:1.4;overflow-wrap:anywhere}
+  .dup-meta{font-size:12px;color:var(--text2);margin-top:2px}
+  .dup-danger{background:var(--red)!important}
   /* Task card */
   .task-list{display:flex;flex-direction:column;gap:8px}
   .task-item{border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);overflow:hidden}
@@ -310,6 +318,7 @@
     <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;user-select:none">
       <input type="checkbox" id="chk-show-done" checked onchange="render()"> Mostrar concluídas
     </label>
+    <button class="btn-dedupe" onclick="abrirRepetidas()">🧹 Limpar repetidas</button>
   </div>
 </div>
 
@@ -477,6 +486,18 @@
 
 <!-- Botão flutuante planejamento -->
 <button class="fab" id="fab-plan" onclick="abrirPlanejamento()" title="Inserir planejamento de amanhã" style="display:none">📅</button>
+
+<!-- Modal limpar repetidas -->
+<div class="modal-overlay hidden" id="modal-dup" onclick="if(event.target===this)fecharRepetidas()">
+  <div class="modal-box">
+    <div class="modal-title">🧹 Tarefas repetidas</div>
+    <div class="modal-sub" id="dup-sub"></div>
+    <div id="dup-list"></div>
+    <button class="btn-plan dup-danger" id="dup-apagar" onclick="apagarRepetidas()">Apagar repetidas selecionadas</button>
+    <button class="btn-plan-cancel" id="dup-desfazer" style="display:none;margin-bottom:8px" onclick="desfazerRepetidas()">↩ Desfazer</button>
+    <button class="btn-plan-cancel" onclick="fecharRepetidas()">Fechar</button>
+  </div>
+</div>
 
 <!-- Modal planejamento -->
 <div class="modal-overlay hidden" id="modal-plan">
@@ -878,6 +899,81 @@ async function deleteTask(id){
   if(!confirm(serie?'Esta tarefa se repete. Remover a tarefa e TODAS as repetições?':'Remover esta tarefa?'))return;
   try{await window.fbDeleteTask(realId);if(editingId===id||editingId===realId)editingId=null;showToast('Removida ✓');}catch(e){alert('Erro: '+e.message);}
 }
+
+
+// ===== Limpar tarefas repetidas =====
+// Considera repetidas as tarefas SUAS com mesmo nome (ignorando maiúsculas, acentos e espaços),
+// mesma data, mesmo horário, mesma repetição e mesmo status (concluída ou não).
+let dupGroups=[],dupRemoved=[];
+function dupNorm(x){return String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim();}
+function dupKey(t){return [dupNorm(t.name),t.date||'',t.time||'',(t.recurrence&&t.recurrence.type)||'',t.done?'1':'0'].join('|');}
+function dupScore(t){let n=0;['resp','cat','date','time','durVal','order','goalId','notes'].forEach(k=>{if(t[k]!==undefined&&t[k]!==null&&t[k]!=='')n++;});if(t.shared)n++;return n;}
+function findDupGroups(){
+  const user=window.getCurrentUser();if(!user)return [];
+  const map=new Map();
+  (window.tasks||[]).filter(t=>t.ownerId===user.uid&&dupNorm(t.name)).forEach(t=>{
+    const k=dupKey(t);if(!map.has(k))map.set(k,[]);map.get(k).push(t);
+  });
+  const out=[];
+  map.forEach(list=>{
+    if(list.length<2)return;
+    // mantém a mais completa; em empate, a mais antiga
+    list.sort((a,b)=>dupScore(b)-dupScore(a)||String(a.createdAt||'').localeCompare(String(b.createdAt||''))||String(a.id).localeCompare(String(b.id)));
+    out.push({keep:list[0],extra:list.slice(1)});
+  });
+  return out.sort((a,b)=>dupNorm(a.keep.name).localeCompare(dupNorm(b.keep.name)));
+}
+function abrirRepetidas(){
+  dupGroups=findDupGroups();dupRemoved=[];
+  document.getElementById('dup-desfazer').style.display='none';
+  renderRepetidas();
+  document.getElementById('modal-dup').classList.remove('hidden');
+}
+function fecharRepetidas(){document.getElementById('modal-dup').classList.add('hidden');}
+function renderRepetidas(){
+  const list=document.getElementById('dup-list'),sub=document.getElementById('dup-sub'),btn=document.getElementById('dup-apagar');
+  if(!dupGroups.length){
+    sub.textContent=dupRemoved.length?'Pronto! '+dupRemoved.length+' tarefa(s) repetida(s) removida(s).':'Nenhuma tarefa repetida encontrada. 🎉';
+    list.innerHTML='';btn.style.display='none';return;
+  }
+  const total=dupGroups.reduce((n,g)=>n+g.extra.length,0);
+  sub.textContent='Encontrei '+dupGroups.length+' tarefa(s) com cópias ('+total+' a mais). Em cada grupo, uma é mantida e as outras são apagadas. Desmarque o que quiser deixar como está.';
+  list.innerHTML=dupGroups.map((g,i)=>{
+    const t=g.keep,meta=[fmtDate(t.date,t.time),t.cat,t.resp,t.done?'concluída':''].filter(Boolean).join(' · ');
+    return `<label class="dup-group"><input type="checkbox" class="dup-chk" data-i="${i}" checked onchange="atualizarBtnRepetidas()">
+    <div><div class="dup-name">${esc(t.name)}</div>
+    <div class="dup-meta">${g.extra.length+1} iguais → mantém 1, apaga ${g.extra.length}${meta?'<br>'+esc(meta):''}</div></div></label>`;
+  }).join('');
+  btn.style.display='';atualizarBtnRepetidas();
+}
+function atualizarBtnRepetidas(){
+  let n=0;document.querySelectorAll('.dup-chk').forEach(c=>{if(c.checked)n+=dupGroups[+c.dataset.i].extra.length;});
+  const b=document.getElementById('dup-apagar');b.textContent='Apagar '+n+' repetida'+(n===1?'':'s');b.disabled=!n;
+}
+async function apagarRepetidas(){
+  const sel=[...document.querySelectorAll('.dup-chk')].filter(c=>c.checked).map(c=>dupGroups[+c.dataset.i]);
+  const toDelete=sel.flatMap(g=>g.extra);if(!toDelete.length)return;
+  if(!confirm('Apagar '+toDelete.length+' tarefa(s) repetida(s)? Você poderá desfazer logo em seguida.'))return;
+  const b=document.getElementById('dup-apagar');b.disabled=true;b.textContent='Apagando...';
+  dupRemoved=[];let falhas=0;
+  for(const t of toDelete){
+    try{await window.fbDeleteTask(t.id);dupRemoved.push(t);if(editingId===t.id)editingId=null;}catch(e){falhas++;console.error(e);}
+  }
+  dupGroups=[];
+  renderRepetidas();
+  if(dupRemoved.length)document.getElementById('dup-desfazer').style.display='';
+  if(falhas)alert(falhas+' tarefa(s) não puderam ser apagadas.');
+  showToast(dupRemoved.length+' removida(s) ✓');
+}
+async function desfazerRepetidas(){
+  const back=dupRemoved;dupRemoved=[];let n=0;
+  for(const t of back){try{await window.fbSaveTask(t);n++;}catch(e){console.error(e);}}
+  document.getElementById('dup-desfazer').style.display='none';
+  document.getElementById('dup-sub').textContent=n+' tarefa(s) restaurada(s).';
+  document.getElementById('dup-list').innerHTML='';
+  showToast('Restauradas ✓');
+}
+window.abrirRepetidas=abrirRepetidas;window.fecharRepetidas=fecharRepetidas;window.apagarRepetidas=apagarRepetidas;window.desfazerRepetidas=desfazerRepetidas;window.atualizarBtnRepetidas=atualizarBtnRepetidas;
 
 async function duplicateTask(id){
   const realId=id.split('__occ__')[0];
